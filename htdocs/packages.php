@@ -122,7 +122,18 @@ $fetch_ref = function($project, $ref) use ($fetch_composer) {
 $fetch_refs = function($project) use ($fetch_ref, $repos) {
     $datas = array();
     try {
-        foreach (array_merge($repos->branches($project['id']), $repos->tags($project['id'])) as $ref) {
+        $refs = $repos->branches($project['id']);
+        $page = 1;
+        do {
+            $tags = $repos->tags($project['id'], ['page' => $page, 'per_page' => 100]);
+            if(!empty($tags)) {
+                $refs = array_merge($refs, $tags);
+            }
+
+            $page++;
+        } while(!empty($tags));
+
+        foreach ($refs as $ref) {
             foreach ($fetch_ref($project, $ref) as $version => $data) {
                 $datas[$version] = $data;
             }
