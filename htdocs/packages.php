@@ -8,6 +8,8 @@ use Gitlab\Exception\RuntimeException;
 $packages_file = __DIR__ . '/../cache/packages.json';
 $static_file = __DIR__ . '/../confs/static-repos.json';
 
+$clear_cache = filter_input(INPUT_GET, 'clear_cache', FILTER_VALIDATE_BOOLEAN);
+
 /**
  * Output a json file, sending max-age header, then dies
  */
@@ -152,7 +154,7 @@ $fetch_refs = function($project) use ($fetch_ref, $repos) {
  * @param array $project
  * @return array Same as $fetch_refs
  */
-$load_data = function($project) use ($fetch_refs) {
+$load_data = function($project) use ($fetch_refs, $clear_cache) {
     $file    = __DIR__ . "/../cache/{$project['path_with_namespace']}.json";
     $mtime   = strtotime($project['last_activity_at']);
 
@@ -160,7 +162,7 @@ $load_data = function($project) use ($fetch_refs) {
         mkdir(dirname($file), 0777, true);
     }
 
-    if (file_exists($file) && filemtime($file) >= $mtime) {
+    if (file_exists($file) && filemtime($file) >= $mtime && $clear_cache === false) {
         if (filesize($file) > 0) {
             return json_decode(file_get_contents($file));
         } else {
@@ -223,7 +225,7 @@ if (!empty($confs['groups'])) {
 }
 
 // Regenerate packages_file is needed
-if (!file_exists($packages_file) || filemtime($packages_file) < $mtime) {
+if (!file_exists($packages_file) || filemtime($packages_file) < $mtime || $clear_cache === true) {
     $packages = array();
     foreach ($all_projects as $project) {
         if (($package = $load_data($project)) && ($package_name = $get_package_name($project))) {
